@@ -124,17 +124,6 @@ PROJECT_ID=your-project-id AUTH_MODE=apikey ./deploy.sh      # or: Gemini API ke
 With Vertex AI, Google Search grounding is billed to the project, so there are no free-tier grounding limits.
 For CI/CD after the first deploy, run `gcloud builds submit --config cloudbuild.yaml`.
 
-### Alternative: Render (one click)
-
-[`render.yaml`](render.yaml) is a Render Blueprint. One Docker web service serves both the UI and the API.
-
-1. On [render.com](https://render.com) choose **New + → Blueprint** and select this repository.
-2. Paste your `GEMINI_API_KEY` when prompted, then click **Apply**.
-
-Gemini and Google Search grounding work exactly as on Cloud Run. Without Google Cloud credentials,
-reports are kept in the in-memory cache instead of Firestore. The free plan sleeps when idle, so the
-first request after a pause takes about a minute.
-
 ## Configuration
 
 | Variable | Default | Purpose |
