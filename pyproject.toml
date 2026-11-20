@@ -2,28 +2,57 @@
 name = "evidentia"
 version = "1.0.0"
 description = "Multi-agent research and fact-checking system powered by Gemini and Google Search."
+readme = "README.md"
 requires-python = ">=3.12"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q --strict-markers"
 
 [tool.coverage.run]
 source = ["app"]
-omit = ["app/main.py"]
+branch = true
 
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
+exclude_also = ["\\.\\.\\.", "if TYPE_CHECKING:"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "S", "BLE", "SIM", "RUF"]
-ignore = ["RUF001", "RUF003"]
+select = [
+    "E", "F", "W",  # pycodestyle / pyflakes
+    "I",            # import sorting
+    "B",            # bugbear
+    "UP",           # pyupgrade
+    "S",            # bandit security rules
+    "BLE",          # no blind excepts without a reason
+    "SIM",          # simplifications
+    "C4",           # comprehensions
+    "PIE", "RET",   # misc / return hygiene
+    "PTH",          # pathlib
+    "RUF",
+]
+ignore = [
+    "RUF001", "RUF003",  # typographic characters (…, —) in user-facing text are intended
+    "SIM905",            # "a b c".split() is the clearest way to write a stopword list
+]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "S105", "S106", "E501", "BLE001", "RUF012"]
+"tests/*" = ["S101", "S105", "S106", "BLE001", "RUF012"]
+
+[tool.mypy]
+python_version = "3.12"
+packages = ["app"]
+strict = true
+plugins = ["pydantic.mypy"]
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = ["google.cloud.*"]
+ignore_missing_imports = true

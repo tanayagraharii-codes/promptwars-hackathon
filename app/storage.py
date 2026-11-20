@@ -1,8 +1,8 @@
 """Report persistence and caching.
 
-Reports are keyed by a hash of the normalised question, so repeated questions
-are served instantly (and cost no Gemini quota). An in-memory TTL/LRU cache is
-always used; Cloud Firestore can be enabled for durable, shareable reports.
+Reports are keyed by a hash of the normalised question and depth, so repeated
+questions are served instantly and cost no Gemini quota. An in-memory TTL/LRU
+cache is always used; Cloud Firestore adds durable, shareable reports.
 """
 
 from __future__ import annotations
@@ -14,26 +14,33 @@ import time
 from collections import OrderedDict
 from typing import Protocol
 
+from google.cloud import firestore
+
 from app.config import Settings
 from app.schemas import Report
 
 logger = logging.getLogger(__name__)
 
+REPORT_ID_LENGTH = 20
+FIRESTORE_TIMEOUT_S = 10.0
+
 
 def report_key(question: str, depth: str = "standard") -> str:
-    """Stable ID for a question + depth: case/whitespace-insensitive SHA-256 prefix."""
+    """Stable report ID for a question + depth (case- and whitespace-insensitive)."""
     normalised = " ".join(question.lower().split()).rstrip("?.! ") + f"|{depth}"
-    return hashlib.sha256(normalised.encode("utf-8")).hexdigest()[:20]
+    return hashlib.sha256(normalised.encode("utf-8")).hexdigest()[:REPORT_ID_LENGTH]
 
 
 class ReportStore(Protocol):
+    """Where finished reports are kept so they can be re-served and shared."""
+
     async def get(self, key: str) -> Report | None: ...
 
     async def put(self, report: Report) -> None: ...
 
 
 class MemoryReportStore:
-    """Bounded LRU cache with per-entry TTL."""
+    """Bounded LRU cache with a per-entry time-to-live."""
 
     def __init__(self, max_items: int, ttl_s: float) -> None:
         self._items: OrderedDict[str, tuple[float, Report]] = OrderedDict()
@@ -59,14 +66,19 @@ class MemoryReportStore:
 
 
 class FirestoreReportStore:
-    """Durable store in Cloud Firestore, fronted by the in-memory cache."""
+    """Durable store in Cloud Firestore, fronted by the in-memory cache.
 
-    def __init__(self, collection: str, cache: MemoryReportStore, client: object | None = None):
-        if client is None:
-            from google.cloud import firestore  # optional dependency
+    Persistence is best-effort: a Firestore outage is logged and the request
+    is still answered from the cache, never failed.
+    """
 
-            client = firestore.AsyncClient()
-        self._collection = client.collection(collection)
+    def __init__(
+        self,
+        collection: str,
+        cache: MemoryReportStore,
+        client: firestore.AsyncClient | None = None,
+    ) -> None:
+        self._collection = (client or firestore.AsyncClient()).collection(collection)
         self._cache = cache
 
     async def get(self, key: str) -> Report | None:
@@ -89,13 +101,14 @@ class FirestoreReportStore:
         try:
             await asyncio.wait_for(
                 self._collection.document(report.id).set(report.model_dump(mode="json")),
-                timeout=10,
+                timeout=FIRESTORE_TIMEOUT_S,
             )
         except Exception:
             logger.exception("firestore_write_failed")
 
 
 def build_store(settings: Settings) -> ReportStore:
+    """Firestore when enabled (falling back to memory if it cannot start), else memory."""
     cache = MemoryReportStore(settings.cache_max_items, settings.cache_ttl_s)
     if settings.firestore_enabled:
         try:

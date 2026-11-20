@@ -1,0 +1,22 @@
+# Run the same checks as CI before every commit: pip install pre-commit && pre-commit install
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.5
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (strict)
+        entry: mypy
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: frontend
+        name: eslint + prettier
+        entry: npm run lint
+        language: system
+        pass_filenames: false
+        files: ^(static|tests/js)/

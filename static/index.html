@@ -1,116 +1,193 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Evidentia: a multi-agent system that researches complex topics, verifies claims against reliable sources, flags conflicting evidence and writes evidence-backed reports.">
-  <meta name="color-scheme" content="light dark">
-  <title>Evidentia: Multi-Agent Research &amp; Fact-Checking</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%231a56db'/%3E%3Cpath d='M10 16.5l4 4 8-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/static/styles.css">
-  <script src="/static/lib.js" defer></script>
-  <script src="/static/app.js" defer></script>
-</head>
-<body>
-  <a class="skip-link" href="#main">Skip to main content</a>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Evidentia: a multi-agent system that researches complex topics, verifies claims against reliable sources, flags conflicting evidence and writes evidence-backed reports."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <title>Evidentia: Multi-Agent Research &amp; Fact-Checking</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%231a56db'/%3E%3Cpath d='M10 16.5l4 4 8-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script type="module" src="/static/js/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
 
-  <header class="site-header">
-    <div class="wrap">
-      <p class="brand"><span aria-hidden="true" class="brand-mark">✓</span> Evidentia</p>
-      <p class="tagline">Multi-agent research &amp; fact-checking, powered by Gemini</p>
-    </div>
-  </header>
+    <header class="site-header">
+      <div class="wrap">
+        <p class="brand"><span aria-hidden="true" class="brand-mark">✓</span> Evidentia</p>
+        <p class="tagline">Multi-agent research &amp; fact-checking, powered by Gemini</p>
+      </div>
+    </header>
 
-  <main id="main" class="wrap" tabindex="-1">
-    <section aria-labelledby="ask-heading" class="card">
-      <h1 id="ask-heading">What should we research and fact-check?</h1>
-      <form id="research-form" novalidate>
-        <label for="question">Your question or claim</label>
-        <p id="question-hint" class="hint">10–500 characters. Complex or contested topics work best.</p>
-        <textarea id="question" name="question" rows="3" minlength="10" maxlength="500" required
-          aria-describedby="question-hint question-error"
-          placeholder="e.g. Is intermittent fasting more effective than calorie restriction for weight loss?"></textarea>
-        <p id="question-error" class="error" role="alert" hidden></p>
-        <fieldset class="depth">
-          <legend>Research depth</legend>
-          <label class="radio"><input type="radio" name="depth" value="quick"> Quick <span class="hint-inline">(2 sub-questions, ~2× faster)</span></label>
-          <label class="radio"><input type="radio" name="depth" value="standard" checked> Standard <span class="hint-inline">(up to 4 sub-questions, more evidence)</span></label>
-        </fieldset>
-        <div class="form-row">
-          <button type="submit" id="submit-btn" class="btn-primary">Research &amp; verify</button>
-          <span class="char-count" id="char-count" aria-live="polite">0 / 500</span>
+    <main id="main" class="wrap" tabindex="-1">
+      <section aria-labelledby="ask-heading" class="card">
+        <h1 id="ask-heading">What should we research and fact-check?</h1>
+        <form id="research-form" novalidate>
+          <label for="question">Your question or claim</label>
+          <p id="question-hint" class="hint">
+            10–500 characters. Complex or contested topics work best.
+          </p>
+          <textarea
+            id="question"
+            name="question"
+            rows="3"
+            minlength="10"
+            maxlength="500"
+            required
+            aria-describedby="question-hint question-error"
+            placeholder="e.g. Is intermittent fasting more effective than calorie restriction for weight loss?"
+          ></textarea>
+          <p id="question-error" class="error" role="alert" hidden></p>
+          <fieldset class="depth">
+            <legend>Research depth</legend>
+            <label class="radio"
+              ><input type="radio" name="depth" value="quick" /> Quick
+              <span class="hint-inline">(2 sub-questions, ~2× faster)</span></label
+            >
+            <label class="radio"
+              ><input type="radio" name="depth" value="standard" checked /> Standard
+              <span class="hint-inline">(up to 4 sub-questions, more evidence)</span></label
+            >
+          </fieldset>
+          <div class="form-row">
+            <button type="submit" id="submit-btn" class="btn-primary">Research &amp; verify</button>
+            <span class="char-count" id="char-count" aria-live="polite">0 / 500</span>
+          </div>
+        </form>
+        <div class="examples">
+          <h2 class="examples-title" id="examples-title">Try an example</h2>
+          <ul class="chips" aria-labelledby="examples-title">
+            <li>
+              <button type="button" class="chip">
+                Is intermittent fasting more effective than calorie restriction for weight loss?
+              </button>
+            </li>
+            <li>
+              <button type="button" class="chip">
+                Do electric vehicles produce lower lifetime emissions than petrol cars?
+              </button>
+            </li>
+            <li>
+              <button type="button" class="chip">
+                Does remote work increase or decrease employee productivity?
+              </button>
+            </li>
+          </ul>
         </div>
-      </form>
-      <div class="examples">
-        <h2 class="examples-title" id="examples-title">Try an example</h2>
-        <ul class="chips" aria-labelledby="examples-title">
-          <li><button type="button" class="chip">Is intermittent fasting more effective than calorie restriction for weight loss?</button></li>
-          <li><button type="button" class="chip">Do electric vehicles produce lower lifetime emissions than petrol cars?</button></li>
-          <li><button type="button" class="chip">Does remote work increase or decrease employee productivity?</button></li>
-        </ul>
-      </div>
-    </section>
+      </section>
 
-    <section id="progress-section" aria-labelledby="progress-heading" class="card" hidden>
-      <h2 id="progress-heading">Agents at work</h2>
-      <ol class="agents" id="agent-list">
-        <li data-agent="planner"><span class="agent-icon" aria-hidden="true"></span><div><strong>Planner</strong><span class="agent-status">Waiting</span><span class="agent-detail"></span></div></li>
-        <li data-agent="researcher"><span class="agent-icon" aria-hidden="true"></span><div><strong>Researchers</strong><span class="agent-status">Waiting</span><span class="agent-detail"></span></div></li>
-        <li data-agent="fact_checker"><span class="agent-icon" aria-hidden="true"></span><div><strong>Fact-checkers</strong><span class="agent-status">Waiting</span><span class="agent-detail"></span></div></li>
-        <li data-agent="conflict_detector"><span class="agent-icon" aria-hidden="true"></span><div><strong>Conflict detector</strong><span class="agent-status">Waiting</span><span class="agent-detail"></span></div></li>
-        <li data-agent="report_writer"><span class="agent-icon" aria-hidden="true"></span><div><strong>Report writer</strong><span class="agent-status">Waiting</span><span class="agent-detail"></span></div></li>
-      </ol>
-      <div id="plan" class="plan" hidden>
-        <h3>Research plan</h3>
-        <ol id="plan-list"></ol>
-      </div>
-      <p id="live-status" class="visually-hidden" role="status" aria-live="polite"></p>
-    </section>
+      <section id="progress-section" aria-labelledby="progress-heading" class="card" hidden>
+        <h2 id="progress-heading">Agents at work</h2>
+        <ol class="agents" id="agent-list">
+          <li data-agent="planner">
+            <span class="agent-icon" aria-hidden="true"></span>
+            <div>
+              <strong>Planner</strong><span class="agent-status">Waiting</span
+              ><span class="agent-detail"></span>
+            </div>
+          </li>
+          <li data-agent="researcher">
+            <span class="agent-icon" aria-hidden="true"></span>
+            <div>
+              <strong>Researchers</strong><span class="agent-status">Waiting</span
+              ><span class="agent-detail"></span>
+            </div>
+          </li>
+          <li data-agent="fact_checker">
+            <span class="agent-icon" aria-hidden="true"></span>
+            <div>
+              <strong>Fact-checkers</strong><span class="agent-status">Waiting</span
+              ><span class="agent-detail"></span>
+            </div>
+          </li>
+          <li data-agent="conflict_detector">
+            <span class="agent-icon" aria-hidden="true"></span>
+            <div>
+              <strong>Conflict detector</strong><span class="agent-status">Waiting</span
+              ><span class="agent-detail"></span>
+            </div>
+          </li>
+          <li data-agent="report_writer">
+            <span class="agent-icon" aria-hidden="true"></span>
+            <div>
+              <strong>Report writer</strong><span class="agent-status">Waiting</span
+              ><span class="agent-detail"></span>
+            </div>
+          </li>
+        </ol>
+        <div id="plan" class="plan" hidden>
+          <h3>Research plan</h3>
+          <ol id="plan-list"></ol>
+        </div>
+        <p id="live-status" class="visually-hidden" role="status" aria-live="polite"></p>
+      </section>
 
-    <section id="report-section" aria-labelledby="report-title" hidden>
-      <article class="card report">
-        <header class="report-head">
-          <h2 id="report-title" tabindex="-1"></h2>
-          <p class="meta" id="report-meta"></p>
-          <div class="report-actions">
-            <button type="button" id="copy-link" class="btn-secondary">Copy share link</button>
-            <button type="button" id="download-md" class="btn-secondary">Download Markdown</button>
-          </div>
-        </header>
-        <dl class="stats" id="stats"></dl>
-        <h3>Summary</h3>
-        <p id="report-summary"></p>
-        <h3>Key findings</h3>
-        <ul id="key-findings" class="findings"></ul>
-        <div id="report-sections"></div>
-        <section id="conflicts-block" aria-labelledby="conflicts-heading" hidden>
-          <h3 id="conflicts-heading">Conflicting evidence</h3>
-          <div id="conflicts"></div>
-        </section>
-        <section aria-labelledby="claims-heading">
-          <h3 id="claims-heading">Claim-by-claim verification</h3>
-          <div class="table-scroll" role="region" aria-labelledby="claims-heading" tabindex="0">
-            <table class="claims">
-              <caption class="visually-hidden">Each claim with its verdict, confidence score and sources</caption>
-              <thead><tr><th scope="col">ID</th><th scope="col">Claim</th><th scope="col">Verdict</th><th scope="col">Confidence</th><th scope="col">Evidence</th></tr></thead>
-              <tbody id="claims-body"></tbody>
-            </table>
-          </div>
-        </section>
-        <section aria-labelledby="limits-heading">
-          <h3 id="limits-heading">Limitations</h3>
-          <ul id="limitations"></ul>
-        </section>
-        <section aria-labelledby="sources-heading">
-          <h3 id="sources-heading">Sources</h3>
-          <ol id="sources" class="sources"></ol>
-        </section>
-      </article>
-    </section>
-  </main>
+      <section id="report-section" aria-labelledby="report-title" hidden>
+        <article class="card report">
+          <header class="report-head">
+            <h2 id="report-title" tabindex="-1"></h2>
+            <p class="meta" id="report-meta"></p>
+            <div class="report-actions">
+              <button type="button" id="copy-link" class="btn-secondary">Copy share link</button>
+              <button type="button" id="download-md" class="btn-secondary">
+                Download Markdown
+              </button>
+            </div>
+          </header>
+          <dl class="stats" id="stats"></dl>
+          <h3>Summary</h3>
+          <p id="report-summary"></p>
+          <h3>Key findings</h3>
+          <ul id="key-findings" class="findings"></ul>
+          <div id="report-sections"></div>
+          <section id="conflicts-block" aria-labelledby="conflicts-heading" hidden>
+            <h3 id="conflicts-heading">Conflicting evidence</h3>
+            <div id="conflicts"></div>
+          </section>
+          <section aria-labelledby="claims-heading">
+            <h3 id="claims-heading">Claim-by-claim verification</h3>
+            <div class="table-scroll" role="region" aria-labelledby="claims-heading" tabindex="0">
+              <table class="claims">
+                <caption class="visually-hidden">
+                  Each claim with its verdict, confidence score and sources
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Claim</th>
+                    <th scope="col">Verdict</th>
+                    <th scope="col">Confidence</th>
+                    <th scope="col">Evidence</th>
+                  </tr>
+                </thead>
+                <tbody id="claims-body"></tbody>
+              </table>
+            </div>
+          </section>
+          <section aria-labelledby="limits-heading">
+            <h3 id="limits-heading">Limitations</h3>
+            <ul id="limitations"></ul>
+          </section>
+          <section aria-labelledby="sources-heading">
+            <h3 id="sources-heading">Sources</h3>
+            <ol id="sources" class="sources"></ol>
+          </section>
+        </article>
+      </section>
+    </main>
 
-  <footer class="site-footer wrap">
-    <p>AI-generated research can contain mistakes. Always check the linked sources before relying on a finding.</p>
-  </footer>
-</body>
+    <footer class="site-footer wrap">
+      <p>
+        AI-generated research can contain mistakes. Always check the linked sources before relying
+        on a finding.
+      </p>
+    </footer>
+  </body>
 </html>

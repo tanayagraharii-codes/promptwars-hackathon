@@ -40,10 +40,11 @@ if ! gcloud firestore databases describe --database="(default)" >/dev/null 2>&1;
   gcloud firestore databases create --location="${REGION}" --type=firestore-native
 fi
 
-env_vars="FIRESTORE_ENABLED=true,SEARCH_BACKEND=auto"
+# GOOGLE_CLOUD_PROJECT also enables Cloud Trace correlation of log lines.
+env_vars="FIRESTORE_ENABLED=true,SEARCH_BACKEND=auto,GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
 secret_flags=()
 if [[ "${AUTH_MODE}" == "vertex" ]]; then
-  env_vars+=",GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${REGION}"
+  env_vars+=",GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_LOCATION=${REGION}"
 else
   : "${GEMINI_API_KEY:?Set GEMINI_API_KEY for AUTH_MODE=apikey}"
   step "Storing the Gemini API key in Secret Manager"

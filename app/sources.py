@@ -128,49 +128,67 @@ def tier_for(score: float) -> CredibilityTier:
     return CredibilityTier.LOW
 
 
+MAX_TITLE_CHARS = 200
+MAX_SNIPPET_CHARS = 500
+PROMPT_SNIPPET_CHARS = 300
+
+
 class SourceRegistry:
-    """Assigns stable IDs (S1, S2, ...) to sources and de-duplicates by URL."""
+    """Assigns stable IDs (S1, S2, ...) to sources and de-duplicates them by URL.
+
+    One registry is shared by every agent in a run, so a page found by two
+    researchers keeps a single ID and citations stay consistent.
+    """
 
     def __init__(self) -> None:
-        self._by_key: dict[str, Source] = {}
+        self._by_url: dict[str, Source] = {}
+        self._by_id: dict[str, Source] = {}
         self._lock = threading.Lock()
 
     def add(self, url: str, title: str, snippet: str = "") -> Source:
+        """Register a source (or return the existing one for the same URL)."""
         key = url.split("#")[0].rstrip("/")
         with self._lock:
-            existing = self._by_key.get(key)
+            existing = self._by_url.get(key)
             if existing is not None:
                 if snippet and not existing.snippet:
-                    existing.snippet = snippet[:500]
+                    existing.snippet = snippet[:MAX_SNIPPET_CHARS]
                 return existing
             domain = extract_domain(url, title)
             score = score_domain(domain)
             source = Source(
-                id=f"S{len(self._by_key) + 1}",
+                id=f"S{len(self._by_url) + 1}",
                 url=url,
-                title=(title or domain or url)[:200],
+                title=(title or domain or url)[:MAX_TITLE_CHARS],
                 domain=domain,
                 credibility=score,
                 tier=tier_for(score),
-                snippet=snippet[:500],
+                snippet=snippet[:MAX_SNIPPET_CHARS],
             )
-            self._by_key[key] = source
+            self._by_url[key] = source
+            self._by_id[source.id] = source
             return source
 
     def get(self, source_id: str) -> Source | None:
-        return next((s for s in self._by_key.values() if s.id == source_id), None)
+        return self._by_id.get(source_id)
+
+    def credibility(self, source_id: str) -> float:
+        """Credibility of a registered source; unknown IDs count as zero."""
+        source = self._by_id.get(source_id)
+        return source.credibility if source else 0.0
 
     def ids(self) -> set[str]:
-        return {s.id for s in self._by_key.values()}
+        return set(self._by_id)
 
     def all(self) -> list[Source]:
-        return sorted(self._by_key.values(), key=lambda s: int(s.id[1:]))
+        """Every registered source, in ID order."""
+        return list(self._by_id.values())
 
 
 def format_sources_for_prompt(sources: list[Source]) -> str:
     """Compact numbered listing used inside agent prompts."""
     lines = []
     for s in sources:
-        snippet = f" | {s.snippet[:300]}" if s.snippet else ""
+        snippet = f" | {s.snippet[:PROMPT_SNIPPET_CHARS]}" if s.snippet else ""
         lines.append(f"[{s.id}] {s.title} ({s.domain}, credibility {s.credibility:.2f}){snippet}")
     return "\n".join(lines)

@@ -1,0 +1,23 @@
+{
+  "name": "evidentia-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Frontend tooling for Evidentia: lint, format and unit tests (no build step).",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "eslint static tests/js eslint.config.js",
+    "format": "prettier --write static tests/js",
+    "format:check": "prettier --check static tests/js",
+    "test": "node --test \"tests/js/*.test.js\"",
+    "check": "npm run lint && npm run format:check && npm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "globals": "16.5.0",
+    "prettier": "3.10.1"
+  }
+}

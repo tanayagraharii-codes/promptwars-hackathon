@@ -91,3 +91,11 @@ async def test_firestore_errors_do_not_break_requests():
 
 def test_build_store_defaults_to_memory():
     assert isinstance(build_store(Settings(firestore_enabled=False)), MemoryReportStore)
+
+
+def test_build_store_falls_back_to_memory_when_firestore_cannot_start(monkeypatch):
+    def unavailable(*_args, **_kwargs):
+        raise RuntimeError("no Google Cloud credentials")
+
+    monkeypatch.setattr("app.storage.firestore.AsyncClient", unavailable)
+    assert isinstance(build_store(Settings(firestore_enabled=True)), MemoryReportStore)

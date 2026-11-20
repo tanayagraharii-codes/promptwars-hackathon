@@ -57,7 +57,7 @@ Progress is streamed to the browser live (Server-Sent Events), so users see each
 | **IAM** | A least-privilege runtime service account (`aiplatform.user`, `datastore.user`, `logging.logWriter`), created by `deploy.sh`. |
 | **Secret Manager** | API-key mode only: holds `GEMINI_API_KEY`, with access granted on that one secret only. |
 | **Cloud Build / Artifact Registry** | `cloudbuild.yaml`: lint, test, build, push, deploy. |
-| **Cloud Logging** | Structured JSON logs with `severity`, parsed natively on Cloud Run. |
+| **Cloud Logging + Cloud Trace** | Structured JSON logs with `severity`. Each line is tagged with the request's `X-Cloud-Trace-Context`, so Cloud Logging groups a request's logs and links them to its trace (`app/logging_config.py`). |
 
 ## Engineering qualities
 
@@ -87,10 +87,17 @@ Progress is streamed to the browser live (Server-Sent Events), so users see each
 - Fully keyboard operable, visible focus ring, 44 px touch targets.
 - Light and dark themes with AA contrast; `prefers-reduced-motion` respected.
 
-**Testing**: about 155 automated tests, all offline (Gemini and the web are faked), run in CI on every push:
-- **Python (146 tests, ~97% coverage)**: agents, orchestrator, API (streaming, validation, rate limits, security headers), retrieval (including passage selection, caching and backoff), citation mapping, credibility scoring, caching, Firestore, and Vertex AI client selection.
+**Code quality**
+- Small, single-purpose modules: an `api/` layer (routes, dependencies, middleware), a `retrieval/` package (one backend per module), five agents, and typed events.
+- **Strict static typing**: `mypy --strict` passes with zero errors across the whole `app` package.
+- Linting and formatting enforced in CI: ruff (Python, including bandit security rules) and ESLint + Prettier (JavaScript/CSS/HTML).
+- Idiomatic FastAPI dependency injection; untrusted model output validated at every boundary; named constants instead of magic numbers.
+- `make check` runs exactly what CI runs; optional pre-commit hooks run the same tools before each commit.
+
+**Testing**: 195 automated tests, all offline (Gemini and the web are faked), run in CI on every push:
+- **Python (184 tests, 98% line + branch coverage)**: agents, orchestrator, API (streaming, validation, rate limits, capacity, security headers), middleware and trace correlation, retrieval (passage selection, caching, backoff, circuit breaker), the Gemini wrapper (retries, timeouts, fallback, concurrency bound), credibility scoring, Firestore and Vertex AI client selection.
 - **Accessibility (included above)**: landmarks, heading order, labels, ARIA references, live regions and table semantics, plus **WCAG AA contrast ratios computed for every colour pair in both light and dark themes**.
-- **Frontend (8 tests, Node's built-in runner)**: SSE stream parsing across chunk boundaries, URL sanitising, input validation and Markdown export escaping.
+- **Frontend (11 tests, Node's built-in runner)**: SSE parsing across chunk boundaries, URL sanitising, input validation, report statistics and Markdown export escaping.
 
 ## Run locally
 
@@ -102,13 +109,12 @@ uvicorn app.main:app --reload --port 8080
 # open http://localhost:8080
 ```
 
-Run the checks:
+Run the checks (the same ones CI runs):
 
 ```bash
-pytest --cov                      # Python + accessibility tests, with coverage
-node --test "tests/js/*.test.js"  # frontend unit tests
-ruff check app tests              # lint (includes security rules)
-pip-audit -r requirements.txt     # known-vulnerability scan
+npm ci          # frontend tooling: ESLint, Prettier
+make check      # lint + format check, mypy --strict, tests with coverage, dependency audits
+make help       # list every developer command
 ```
 
 ## Deploy to Cloud Run
@@ -143,19 +149,25 @@ For CI/CD after the first deploy, run `gcloud builds submit --config cloudbuild.
 
 ```
 app/
+  main.py            application wiring (settings, services, middleware, routes)
+  api/               routes, dependency injection, security / size-limit / trace middleware
   agents/            planner, researcher, fact_checker, conflict_detector, report_writer
-  orchestrator.py    pipeline + streaming events
-  llm.py             Gemini wrapper: JSON schemas, grounding, retries, fallback
-  search.py          Google Search grounding, Wikipedia fallback, circuit breaker
-  sources.py         credibility scoring, source registry
+  orchestrator.py    the pipeline; streams typed events (events.py)
+  llm.py             Gemini wrapper: JSON schemas, grounding, retries, fallback, cooldown
+  retrieval/         google_search.py, wikipedia.py, auto.py (circuit-broken fallback)
+  sources.py         credibility scoring and the per-run source registry
+  text.py            keyword queries, passage selection, duplicate-claim detection
   security.py        sanitisation, prompt-injection fencing, rate limiting
-  storage.py         cache + Firestore
-  main.py            FastAPI app, security headers, SSE endpoint
-static/              accessible single-page UI (HTML/CSS/JS, no build step)
-  lib.js             pure, unit-tested helpers (SSE parser, sanitising, Markdown export)
-tests/               offline pytest suite (incl. accessibility + contrast)
+  storage.py         TTL/LRU cache + Cloud Firestore
+  logging_config.py  Cloud Logging JSON + Cloud Trace correlation
+static/              accessible single-page UI (no framework, no build step)
+  js/lib.js          pure, unit-tested helpers (SSE parser, sanitising, Markdown export)
+  js/render.js       DOM rendering (textContent only)
+  js/app.js          controller: form, live agent timeline, streaming
+tests/               offline pytest suite (incl. accessibility + contrast); fakes in fakes.py
   js/                frontend unit tests (node --test)
 deploy.sh            one-command Cloud Run deploy (APIs, IAM, Firestore)
+Makefile             developer commands (make help)
 ```
 
 ## Limitations

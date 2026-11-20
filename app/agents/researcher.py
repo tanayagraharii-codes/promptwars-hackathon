@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 
 from app.llm import LLM
+from app.retrieval import Retriever
 from app.schemas import Evidence, ExtractionOutput, PlannedQuestion
-from app.search import Retriever
 from app.security import wrap_untrusted
 from app.sources import SourceRegistry, format_sources_for_prompt
+from app.text import is_near_duplicate
+
+from .base import clamp_limit, known_ids
 
 SYSTEM = (
     "You are a Researcher in a multi-agent fact-checking team. From the evidence provided, "
@@ -20,32 +22,24 @@ SYSTEM = (
     "Claims must be about the topic, never about the sources themselves (e.g. not 'the "
     "sources do not mention X'). Do not repeat the same claim in different words."
 )
+MAX_STATEMENT_CHARS = 500
+
+ExtractedClaims = list[tuple[str, list[str]]]  # (statement, cited source IDs)
 
 
-def _words(text: str) -> set[str]:
-    return {w for w in re.findall(r"[a-z0-9]+", text.lower()) if len(w) > 2}
-
-
-def is_near_duplicate(statement: str, existing: list[str], threshold: float = 0.7) -> bool:
-    """Jaccard similarity on content words: catches paraphrased repeats cheaply."""
-    words = _words(statement)
-    for other in existing:
-        other_words = _words(other)
-        union = words | other_words
-        if union and len(words & other_words) / len(union) >= threshold:
-            return True
-    return False
-
-
-@dataclass
+@dataclass(frozen=True)
 class ResearchResult:
+    """Evidence gathered for one sub-question and the claims extracted from it."""
+
     index: int
     question: PlannedQuestion
     evidence: Evidence
-    claims: list[tuple[str, list[str]]]  # (statement, source ids)
+    claims: ExtractedClaims
 
 
 class ResearcherAgent:
+    """Searches for evidence on one sub-question and extracts checkable claims."""
+
     name = "researcher"
 
     def __init__(self, llm: LLM, retriever: Retriever, max_claims: int) -> None:
@@ -60,9 +54,8 @@ class ResearcherAgent:
         registry: SourceRegistry,
         max_claims: int | None = None,
     ) -> ResearchResult:
-        limit = (
-            self._max_claims if max_claims is None else max(1, min(max_claims, self._max_claims))
-        )
+        """Research ``question``; skips the model call entirely when no evidence is found."""
+        limit = clamp_limit(max_claims, self._max_claims)
         evidence = await self._retriever.search(
             question.question, registry, keywords=question.search_query
         )
@@ -80,10 +73,11 @@ class ResearcherAgent:
         output = await self._llm.generate_json(prompt, ExtractionOutput, system=SYSTEM)
 
         valid_ids = {s.id for s in evidence.sources}
-        claims: list[tuple[str, list[str]]] = []
+        claims: ExtractedClaims = []
         for claim in output.claims[:limit]:
             statement = claim.statement.strip()
             if statement and not is_near_duplicate(statement, [c for c, _ in claims]):
-                ids = [i for i in dict.fromkeys(claim.source_ids) if i in valid_ids]
-                claims.append((statement[:500], ids))
+                claims.append(
+                    (statement[:MAX_STATEMENT_CHARS], known_ids(claim.source_ids, valid_ids))
+                )
         return ResearchResult(index, question, evidence, claims)
