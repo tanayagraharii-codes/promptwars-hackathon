@@ -69,7 +69,7 @@ Progress is streamed to the browser live (Server-Sent Events), so users see each
 - Model output is never trusted blindly: source IDs, claim IDs and citations are all validated in code.
 - Frontend renders only via `textContent`, allows only `http(s)` links (with `rel="noopener noreferrer"`), and uses no `innerHTML`.
 - Error messages never leak internals. The container runs as non-root, and secrets come from env or Secret Manager.
-- **Supply chain**: pinned dependencies, `pip-audit` and security linting in CI (also weekly), and Dependabot for pip, Actions and Docker. See [SECURITY.md](SECURITY.md) for the threat model.
+- **Supply chain**: pinned dependencies, plus `pip-audit` and security linting in CI on every push and weekly. See [SECURITY.md](SECURITY.md) for the threat model.
 
 **Efficiency**
 - **Research depth**: *Quick* mode (2 sub-questions × 2 claims) makes roughly 40% of the model calls of *Standard* mode and finishes about twice as fast. Each depth is cached separately.

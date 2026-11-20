@@ -18,7 +18,7 @@ instead of a public issue. We aim to respond within 72 hours.
 | Path traversal on report IDs | Report IDs must match `^[0-9a-f]{20}$` before lookup | `main.get_report` |
 | Information disclosure | Generic error messages; details only in server logs | `orchestrator.run` |
 | Container escape impact | Non-root user, slim base image, no build tools at runtime | `Dockerfile` |
-| Vulnerable dependencies | Pinned versions, `pip-audit` in CI (weekly too), Dependabot | `.github/` |
+| Vulnerable dependencies | Pinned versions, `pip-audit` in CI on every push and weekly | `.github/workflows/ci.yml` |
 
 The Cloud Run service account has only the roles the app needs (`aiplatform.user`,
 `datastore.user`, `secretmanager.secretAccessor`, `logging.logWriter`). See `deploy.sh`.
