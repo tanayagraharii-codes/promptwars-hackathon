@@ -1,0 +1,22 @@
+# Render Blueprint: one Docker web service serves both the UI and the API.
+# Render → New + → Blueprint → select this repo. You will be asked for GEMINI_API_KEY.
+services:
+  - type: web
+    name: evidentia
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false # secret: entered in the Render dashboard, never committed
+      - key: SEARCH_BACKEND
+        value: auto # Google Search grounding, falling back to Wikipedia
+      - key: FIRESTORE_ENABLED
+        value: "false" # Firestore needs Google Cloud credentials; in-memory cache is used
+      - key: WIKIPEDIA_CONTACT
+        value: https://github.com/tanayagraharii-codes/promptwars-hackathon
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "5"
